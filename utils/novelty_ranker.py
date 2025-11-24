@@ -1,8 +1,10 @@
 """Novelty ranking utility for filtering important papers."""
 
 import logging
+import time
+import json
+import requests
 from typing import List, Dict, Any, Tuple
-from openai import OpenAI
 
 
 logger = logging.getLogger(__name__)
@@ -20,25 +22,31 @@ class NoveltyRanker:
         """
         self.config = config
 
-        # Get LLM config
-        llm_config = config.get('llm', {})
-        self.api_key = llm_config.get('api_key')
-        self.base_url = llm_config.get('base_url')
-        self.model = llm_config.get('model', 'ax4')
-
         # Get novelty filter config
         filter_config = config.get('novelty_filter', {})
         self.enabled = filter_config.get('enabled', False)
         self.top_papers_count = filter_config.get('top_papers_count', 10)
         self.criteria = filter_config.get('ranking_criteria', ['novelty', 'impact', 'clarity'])
 
-        # Initialize OpenAI client
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
+        # Check if using Ollama
+        self.use_ollama = filter_config.get('use_ollama', False)
 
-        logger.info(f"Initialized NoveltyRanker (enabled: {self.enabled})")
+        if self.use_ollama:
+            # Ollama settings
+            self.ollama_base_url = filter_config.get('ollama_base_url', 'http://localhost:11434')
+            self.model = filter_config.get('ollama_model', 'qwen2.5:latest')
+            self.temperature = filter_config.get('temperature', 0.3)
+            logger.info(f"Initialized NoveltyRanker with Ollama (model: {self.model})")
+        else:
+            # Cloud LLM settings (fallback)
+            llm_config = config.get('llm', {})
+            self.api_key = llm_config.get('api_key')
+            self.base_url = llm_config.get('base_url')
+            self.model = llm_config.get('model', 'ax4')
+            self.temperature = 0.3
+            logger.info(f"Initialized NoveltyRanker with cloud LLM (model: {self.model})")
+
+        logger.info(f"NoveltyRanker enabled: {self.enabled}, top papers: {self.top_papers_count}")
 
     def rank_papers(self, papers_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -116,8 +124,6 @@ class NoveltyRanker:
         abstract = metadata['summary']
 
         # Create scoring prompt
-        criteria_str = ', '.join(self.criteria)
-
         prompt = f"""다음 논문의 초록을 분석하고 각 기준에 대해 1-10점으로 평가해주세요.
 
 논문 제목: {title}
@@ -137,26 +143,46 @@ class NoveltyRanker:
 }}"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert researcher who evaluates academic papers. Always respond in valid JSON format."
+            if self.use_ollama:
+                # Use Ollama API
+                response = requests.post(
+                    f"{self.ollama_base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": f"You are an expert researcher who evaluates academic papers. Always respond in valid JSON format.\n\n{prompt}",
+                        "stream": False,
+                        "format": "json",
+                        "options": {
+                            "temperature": self.temperature,
+                            "num_predict": 500
+                        }
                     },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.3,  # Lower temperature for more consistent scoring
-                max_tokens=500
-            )
-
-            result_text = response.choices[0].message.content.strip()
+                    timeout=60
+                )
+                response.raise_for_status()
+                result_text = response.json()['response']
+            else:
+                # Use cloud API (fallback - requires OpenAI client)
+                from openai import OpenAI
+                client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert researcher who evaluates academic papers. Always respond in valid JSON format."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    temperature=self.temperature,
+                    max_tokens=500
+                )
+                result_text = response.choices[0].message.content.strip()
 
             # Parse JSON response
-            import json
             # Try to extract JSON from markdown code blocks if present
             if '```json' in result_text:
                 result_text = result_text.split('```json')[1].split('```')[0].strip()
@@ -181,7 +207,7 @@ class NoveltyRanker:
             }
 
         except Exception as e:
-            logger.error(f"Error parsing score response: {e}")
+            logger.error(f"Error scoring paper: {e}")
             # Return neutral scores on error
             return {
                 'total_score': 5.0,
