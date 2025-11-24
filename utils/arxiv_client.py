@@ -87,7 +87,7 @@ class ArxivClient:
 
     def download_pdf(self, paper: arxiv.Result, download_dir: str) -> str:
         """
-        Download PDF for a paper.
+        Download PDF for a paper (skip if already exists).
 
         Args:
             paper: arXiv paper result
@@ -103,6 +103,11 @@ class ArxivClient:
         paper_id = paper.entry_id.split('/')[-1]
         filename = f"{paper_id}.pdf"
         filepath = os.path.join(download_dir, filename)
+
+        # Check if PDF already exists
+        if os.path.exists(filepath):
+            logger.info(f"PDF already exists, skipping download: {paper_id}")
+            return filepath
 
         # Download PDF
         logger.info(f"Downloading PDF for paper: {paper_id}")
