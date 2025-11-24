@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project specific - arXiv Paper Summarizer
+data/papers/*.pdf
+data/images/*.png
+data/images/*.jpg
+data/images/*.jpeg
+data/summaries/*.html
+arxiv_summarizer.log
