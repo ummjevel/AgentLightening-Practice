@@ -16,3 +16,7 @@ Jinja2>=3.1.2
 # Utilities
 python-dateutil>=2.8.2
 tqdm>=4.66.0
+
+# Agent Lightning for optimization (optional)
+# Uncomment to enable Agent Lightning features
+# agentlightning>=0.1.0

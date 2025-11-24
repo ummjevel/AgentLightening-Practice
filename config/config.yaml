@@ -47,3 +47,12 @@ output:
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR
   file: "arxiv_summarizer.log"
+
+# Agent Lightning Settings (for optimization)
+agent_lightning:
+  enabled: false  # Set to true to enable Agent Lightning tracking
+  store_path: "data/lightning_store"  # Path to store Agent Lightning data
+  track_prompts: true
+  track_responses: true
+  track_rewards: true
+  optimization_algorithm: "rl"  # rl, prompt_optimization, or supervised

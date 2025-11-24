@@ -1,174 +1,317 @@
 # arXiv Paper Summarizer
 
-매일 올라오는 arXiv 논문을 자동으로 수집하고, AI를 활용하여 핵심 내용을 요약하며, 주요 그림과 함께 시각적으로 제공하는 에이전트 시스템입니다.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-## 🎯 주요 기능
+> *An intelligent agent system that automatically collects, summarizes, and visualizes the latest academic papers from arXiv using AI, with optional Agent Lightning integration for continuous optimization.*
 
-- ✅ **자동 논문 수집**: arXiv API를 통해 최신 논문 자동 다운로드
-- ✅ **AI 요약**: SKT-AI A.X-4.0 LLM을 활용한 구조화된 논문 요약
-- ✅ **이미지 추출**: PDF에서 주요 그림 자동 추출
-- ✅ **시각적 리포트**: 아름다운 HTML 리포트 자동 생성
-- ✅ **설정 파일 관리**: 모든 설정을 YAML 파일로 중앙 관리
+[한국어 문서](README.ko.md) | **English**
 
-## 📁 프로젝트 구조
+---
 
-```
-arxiv-summarizer/
-├── agents/                      # 에이전트 모듈
-│   ├── __init__.py
-│   ├── fetcher.py              # 논문 수집 에이전트
-│   ├── summarizer.py           # 요약 에이전트
-│   └── presenter.py            # 프레젠테이션 에이전트
-├── utils/                       # 유틸리티 모듈
-│   ├── __init__.py
-│   ├── config_loader.py        # 설정 파일 로더
-│   ├── arxiv_client.py         # arXiv API 클라이언트
-│   ├── pdf_processor.py        # PDF 처리 유틸리티
-│   └── image_extractor.py      # 이미지 추출 유틸리티
-├── templates/                   # HTML 템플릿
-│   └── summary_report.html     # 리포트 템플릿
-├── config/                      # 설정 파일
-│   └── config.yaml             # 메인 설정 파일
-├── data/                        # 데이터 디렉토리
-│   ├── papers/                 # 다운로드된 PDF
-│   ├── images/                 # 추출된 이미지
-│   └── summaries/              # 생성된 요약 리포트
-├── main.py                      # 메인 실행 파일
-├── requirements.txt             # Python 의존성
-└── README.md                    # 문서
+## 🎯 Key Features
+
+- ✅ **Automated Paper Collection**: Fetch the latest papers from arXiv API
+- ✅ **AI-Powered Summarization**: Structured summaries using SKT-AI A.X-4.0 LLM
+- ✅ **Smart Image Extraction**: Automatically extract key figures from PDFs
+- ✅ **Beautiful HTML Reports**: Generate visual reports with embedded images
+- ✅ **Configuration Management**: Centralized YAML configuration (zero hardcoded values)
+- ⚡ **Agent Lightning Integration**: Track and optimize agent performance with RL
+
+---
+
+## 📐 Architecture
+
+This project implements a multi-agent architecture inspired by [Agent Lightning](https://github.com/microsoft/agent-lightning):
 
 ```
+┌─────────────────────────────────────────────────────────┐
+│             arXiv Paper Summarizer System               │
+└─────────────────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│   Fetcher    │  │ Summarizer   │  │  Presenter   │
+│   Agent      │  │   Agent      │  │    Agent     │
+│              │  │  (w/ AL*)    │  │              │
+└──────────────┘  └──────────────┘  └──────────────┘
+        │                  │                  │
+        ▼                  ▼                  ▼
+    arXiv API         LLM (A.X-4.0)      HTML Report
+                                         + Images
 
-## 🚀 시작하기
+* AL = Agent Lightning tracking
+```
 
-### 1. 필수 요구사항
+### Agent Descriptions
 
-- Python 3.9 이상
-- pip (Python 패키지 관리자)
+| Agent | Responsibility | Key Features |
+|-------|---------------|--------------|
+| **Fetcher** | Paper collection & extraction | Downloads PDFs, extracts text & images |
+| **Summarizer** | AI-powered summarization | Generates structured summaries with LLM |
+| **Presenter** | Report generation | Creates beautiful HTML reports |
 
-### 2. 설치
+---
+
+## 📁 Project Structure
+
+```
+arxiv-paper-summarizer/
+├── agents/                      # Agent modules
+│   ├── __init__.py
+│   ├── fetcher.py              # Paper collection agent
+│   ├── summarizer.py           # Summarization agent (with AL tracking)
+│   └── presenter.py            # Report generation agent
+├── utils/                       # Utility modules
+│   ├── __init__.py
+│   ├── config_loader.py        # YAML configuration loader
+│   ├── arxiv_client.py         # arXiv API client
+│   ├── pdf_processor.py        # PDF text extraction
+│   ├── image_extractor.py      # PDF image extraction
+│   └── agent_lightning_tracker.py  # Agent Lightning integration
+├── templates/                   # HTML templates
+│   └── summary_report.html     # Report template
+├── config/                      # Configuration files
+│   └── config.yaml             # Main configuration
+├── data/                        # Data storage
+│   ├── papers/                 # Downloaded PDFs
+│   ├── images/                 # Extracted images
+│   ├── summaries/              # Generated reports
+│   └── lightning_store/        # Agent Lightning tracking data
+├── main.py                      # Main entry point
+├── requirements.txt             # Python dependencies
+├── README.md                    # English documentation
+└── README.ko.md                 # Korean documentation
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.9 or higher
+- pip (Python package manager)
+
+### Installation
 
 ```bash
-# 저장소 클론
-git clone <repository-url>
-cd AgentLightening-Practice
+# Clone the repository
+git clone https://github.com/yourusername/arxiv-paper-summarizer.git
+cd arxiv-paper-summarizer
 
-# 의존성 설치
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. 설정
+### Configuration
 
-`config/config.yaml` 파일에서 다음 설정을 조정할 수 있습니다:
+All settings are managed in `config/config.yaml`:
 
 ```yaml
-# arXiv 설정
+# arXiv settings
 arxiv:
-  category: "eess.AS"        # 논문 카테고리
-  max_results: 10            # 가져올 논문 수
+  category: "eess.AS"        # Paper category
+  max_results: 10            # Number of papers to fetch
 
-# LLM 설정 (SKT-AI A.X-4.0)
+# LLM settings (SKT-AI A.X-4.0)
 llm:
-  api_key: "your-api-key"    # API 키
-  model: "ax4"               # 모델명
-  temperature: 0.7           # 생성 온도
+  api_key: "your-api-key"    # API key
+  model: "ax4"               # Model name
+  temperature: 0.7           # Generation temperature
 
-# 출력 설정
-output:
-  format: "html"             # 출력 형식
+# Agent Lightning settings (optional)
+agent_lightning:
+  enabled: false             # Enable/disable tracking
+  track_prompts: true
+  track_responses: true
+  track_rewards: true
 ```
 
-### 4. 실행
+### Running
 
 ```bash
 python main.py
 ```
 
-**참고**: arXiv API는 때때로 rate limiting이나 일시적인 접근 제한이 있을 수 있습니다. HTTP 403 오류가 발생하면 몇 분 후에 다시 시도하거나, 다른 네트워크 환경에서 실행해보세요.
+**Note**: The arXiv API may occasionally have rate limiting or temporary access restrictions. If you encounter HTTP 403 errors, try again after a few minutes or from a different network.
 
-## 📋 설정 파일 가이드
+---
 
-### arXiv 설정
+## ⚡ Agent Lightning Integration
 
-| 항목 | 설명 | 기본값 |
-|------|------|--------|
-| `category` | arXiv 카테고리 | `eess.AS` |
-| `max_results` | 가져올 논문 수 | `10` |
-| `sort_by` | 정렬 기준 | `submittedDate` |
+This project includes optional [Agent Lightning](https://github.com/microsoft/agent-lightning) integration for optimizing agent performance through reinforcement learning.
 
-### LLM 설정
+### What is Agent Lightning?
 
-| 항목 | 설명 | 기본값 |
-|------|------|--------|
-| `api_key` | SKT-AI API 키 | 설정 필요 |
-| `base_url` | API 엔드포인트 | `https://guest-api.sktax.chat/v1` |
-| `model` | 모델명 | `ax4` |
-| `temperature` | 생성 온도 | `0.7` |
-| `max_tokens` | 최대 토큰 수 | `2000` |
+Agent Lightning is Microsoft's framework for optimizing AI agents with minimal code changes. It provides:
 
-### PDF 처리 설정
+- **Automatic tracking** of prompts, responses, and rewards
+- **Reinforcement learning** for iterative improvement
+- **Prompt optimization** using various algorithms
+- **Framework-agnostic** design (works with any agent framework)
 
-| 항목 | 설명 | 기본값 |
-|------|------|--------|
-| `max_images_per_paper` | 논문당 추출할 이미지 수 | `3` |
-| `image_format` | 이미지 형식 | `png` |
-| `min_image_width` | 최소 이미지 너비 | `300` |
-| `min_image_height` | 최소 이미지 높이 | `300` |
+### Enabling Agent Lightning
 
-## 🎨 출력 예시
+1. **Install Agent Lightning** (uncomment in `requirements.txt`):
+   ```bash
+   pip install agentlightning
+   ```
 
-생성된 HTML 리포트는 다음 정보를 포함합니다:
+2. **Enable in configuration** (`config/config.yaml`):
+   ```yaml
+   agent_lightning:
+     enabled: true
+     store_path: "data/lightning_store"
+     track_prompts: true
+     track_responses: true
+     track_rewards: true
+     optimization_algorithm: "rl"
+   ```
 
-1. **논문 메타데이터**
-   - 제목, 저자, 제출일
-   - arXiv ID 및 링크
-   - 카테고리
+3. **Run the system**:
+   ```bash
+   python main.py
+   ```
 
-2. **구조화된 요약**
-   - 📋 한눈에 보기
-   - 🎯 연구 목적
-   - 🔬 방법론
-   - 📊 주요 결과
-   - 💡 의의 및 영향
+### How It Works
 
-3. **주요 그림**
-   - PDF에서 추출한 핵심 이미지
-   - 각 그림의 캡션
+The **SummarizerAgent** includes Agent Lightning tracking:
 
-## 🤖 Agent 아키텍처
+```python
+# Track prompt
+event_id = tracker.emit_prompt(
+    agent_name="SummarizerAgent",
+    prompt=prompt,
+    metadata={'paper_id': paper_id, 'model': self.model}
+)
 
-### Fetcher Agent
-- arXiv API를 통한 논문 검색 및 다운로드
-- PDF에서 텍스트 및 이미지 추출
+# Track response
+tracker.emit_response(
+    event_id=event_id,
+    response=summary_text,
+    metadata={'tokens_used': tokens}
+)
 
-### Summarizer Agent
-- LLM을 활용한 논문 요약
-- 구조화된 프롬프트 생성
-- 한국어 요약 지원
+# Track reward (based on quality heuristics)
+tracker.emit_reward(
+    event_id=event_id,
+    reward=0.8,
+    reason="Good summary length and structure"
+)
+```
 
-### Presenter Agent
-- Jinja2 템플릿 기반 리포트 생성
-- 이미지 Base64 인코딩 및 임베딩
-- 반응형 HTML 디자인
+### Tracked Data
 
-## 🛠️ 개발 및 확장
+All tracking data is saved to `data/lightning_store/session_*.json`:
 
-### 새로운 카테고리 추가
+```json
+{
+  "session_id": "20241124_120000",
+  "total_events": 42,
+  "events": [
+    {
+      "event_type": "prompt",
+      "agent_name": "SummarizerAgent",
+      "prompt": "...",
+      "metadata": {...}
+    },
+    {
+      "event_type": "response",
+      "response": "...",
+      "metadata": {...}
+    },
+    {
+      "event_type": "reward",
+      "reward": 0.8,
+      "reason": "..."
+    }
+  ]
+}
+```
 
-`config/config.yaml`에서 `category` 값을 변경:
+---
+
+## 📋 Configuration Guide
+
+### arXiv Settings
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `category` | arXiv category code | `eess.AS` |
+| `max_results` | Number of papers to fetch | `10` |
+| `sort_by` | Sort criterion | `submittedDate` |
+
+**Popular Categories**:
+- `cs.AI` - Artificial Intelligence
+- `cs.CV` - Computer Vision
+- `cs.CL` - Computation and Language
+- `eess.AS` - Audio and Speech Processing
+
+### LLM Settings
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `api_key` | SKT-AI API key | Required |
+| `base_url` | API endpoint | `https://guest-api.sktax.chat/v1` |
+| `model` | Model name | `ax4` |
+| `temperature` | Generation temperature | `0.7` |
+| `max_tokens` | Maximum response tokens | `2000` |
+
+### PDF Processing Settings
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `max_images_per_paper` | Images to extract per paper | `3` |
+| `image_format` | Output image format | `png` |
+| `min_image_width` | Minimum image width | `300` |
+| `min_image_height` | Minimum image height | `300` |
+
+---
+
+## 📊 Output Example
+
+Generated HTML reports include:
+
+### 1. Paper Metadata
+- Title, authors, submission date
+- arXiv ID with direct link
+- Categories
+
+### 2. Structured Summary
+- 📋 **Key Highlights**: 2-3 sentence overview
+- 🎯 **Research Objective**: Problem being solved
+- 🔬 **Methodology**: Core techniques used
+- 📊 **Main Results**: Key findings
+- 💡 **Significance & Impact**: Academic/practical value
+
+### 3. Key Figures
+- 2-3 main figures extracted from PDF
+- Captions for each figure
+
+**Example output**: `data/summaries/2024-11-24-arxiv-summary.html`
+
+---
+
+## 🛠️ Development
+
+### Adding a New Category
+
+Edit `config/config.yaml`:
 
 ```yaml
 arxiv:
-  category: "cs.AI"  # 인공지능
-  # category: "cs.CV"  # 컴퓨터 비전
-  # category: "cs.CL"  # 자연어 처리
+  category: "cs.AI"  # Change to desired category
 ```
 
-### 템플릿 커스터마이징
+### Customizing Templates
 
-`templates/summary_report.html`을 수정하여 리포트 디자인 변경 가능
+Modify `templates/summary_report.html` to change the report design.
 
-### 로깅 설정
+### Logging
+
+Configure logging in `config/config.yaml`:
 
 ```yaml
 logging:
@@ -176,26 +319,64 @@ logging:
   file: "arxiv_summarizer.log"
 ```
 
-## 📊 Agent Lightning 통합 (향후 계획)
+---
 
-이 프로젝트는 향후 [Agent Lightning](https://github.com/microsoft/agent-lightning)과 통합하여:
+## 🧪 Testing
 
-- 강화학습을 통한 요약 품질 개선
-- 자동 프롬프트 최적화
-- 성능 추적 및 분석
+```bash
+# Run with test configuration (2 papers)
+# Set max_results: 2 in config.yaml
+python main.py
 
-을 지원할 예정입니다.
+# Check output
+ls data/summaries/
+```
 
-## 📝 라이선스
+---
 
-이 프로젝트는 MIT 라이선스를 따릅니다.
+## 🤝 Contributing
 
-## 🙏 감사의 글
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-- [arXiv](https://arxiv.org/) - 오픈 액세스 논문 저장소
-- [SKT-AI](https://github.com/SKT-AI/A.X-4.0) - A.X-4.0 LLM API 제공
-- [Agent Lightning](https://github.com/microsoft/agent-lightning) - AI 에이전트 최적화 프레임워크
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📞 문의
+---
 
-이슈나 질문은 GitHub Issues를 통해 남겨주세요.
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [arXiv](https://arxiv.org/) - Open access pre-print repository
+- [SKT-AI](https://github.com/SKT-AI/A.X-4.0) - A.X-4.0 LLM API provider
+- [Agent Lightning](https://github.com/microsoft/agent-lightning) - AI agent optimization framework
+- [PyMuPDF](https://pymupdf.readthedocs.io/) - PDF processing library
+
+---
+
+## 📞 Support
+
+- Issues: [GitHub Issues](https://github.com/yourusername/arxiv-paper-summarizer/issues)
+- Documentation: [Wiki](https://github.com/yourusername/arxiv-paper-summarizer/wiki)
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Support for multiple LLM providers (OpenAI, Claude, etc.)
+- [ ] Multi-language summary support
+- [ ] Email notification for daily digests
+- [ ] Web interface for configuration
+- [ ] Full Agent Lightning optimization pipeline
+- [ ] Docker containerization
+
+---
+
+Made with ❤️ by the community

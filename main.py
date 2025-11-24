@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from utils.config_loader import ConfigLoader
+from utils.agent_lightning_tracker import AgentLightningTracker
 from agents.fetcher import FetcherAgent
 from agents.summarizer import SummarizerAgent
 from agents.presenter import PresenterAgent
@@ -66,10 +67,15 @@ def main():
     logger.info("Starting arXiv Paper Summarizer")
 
     try:
+        # Initialize Agent Lightning tracker
+        tracker = AgentLightningTracker(config)
+        if tracker.enabled:
+            print("\n⚡ Agent Lightning tracking enabled")
+
         # Initialize agents
         print("\n🤖 Initializing agents...")
         fetcher = FetcherAgent(config)
-        summarizer = SummarizerAgent(config)
+        summarizer = SummarizerAgent(config, tracker=tracker)
         presenter = PresenterAgent(config)
         print("✅ All agents initialized")
 
@@ -98,6 +104,14 @@ def main():
         print("\n📊 Generating HTML report...")
         report_path = presenter.create_report(summaries)
         print(f"✅ Report generated: {report_path}")
+
+        # Save Agent Lightning session
+        if tracker.enabled:
+            tracker.save_session()
+            summary = tracker.get_summary()
+            print(f"\n⚡ Agent Lightning session saved:")
+            print(f"   Events tracked: {summary['total_events']}")
+            print(f"   Store path: {summary['store_path']}")
 
         # Summary
         print("\n" + "=" * 60)

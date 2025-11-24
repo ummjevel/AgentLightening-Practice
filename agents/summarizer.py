@@ -1,7 +1,7 @@
 """Summarizer Agent for creating paper summaries using LLM."""
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from openai import OpenAI
 
 
@@ -11,14 +11,16 @@ logger = logging.getLogger(__name__)
 class SummarizerAgent:
     """Agent responsible for summarizing papers using LLM."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], tracker: Optional[Any] = None):
         """
         Initialize SummarizerAgent.
 
         Args:
             config: Full configuration dictionary
+            tracker: Optional Agent Lightning tracker for optimization
         """
         self.config = config
+        self.tracker = tracker
 
         # Get LLM config
         llm_config = config.get('llm', {})
@@ -39,6 +41,8 @@ class SummarizerAgent:
         )
 
         logger.info(f"Initialized SummarizerAgent with model: {self.model}")
+        if self.tracker:
+            logger.info("Agent Lightning tracking enabled for SummarizerAgent")
 
     def create_summary_prompt(self, paper_data: Dict[str, Any]) -> str:
         """
@@ -120,6 +124,20 @@ Please clearly separate each section.
             # Create prompt
             prompt = self.create_summary_prompt(paper_data)
 
+            # Track prompt with Agent Lightning
+            event_id = ""
+            if self.tracker:
+                event_id = self.tracker.emit_prompt(
+                    agent_name="SummarizerAgent",
+                    prompt=prompt,
+                    metadata={
+                        'paper_id': paper_id,
+                        'title': metadata['title'],
+                        'model': self.model,
+                        'temperature': self.temperature
+                    }
+                )
+
             # Call LLM
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -140,6 +158,32 @@ Please clearly separate each section.
             # Extract summary
             summary_text = response.choices[0].message.content
 
+            # Track response with Agent Lightning
+            if self.tracker and event_id:
+                self.tracker.emit_response(
+                    event_id=event_id,
+                    response=summary_text,
+                    metadata={
+                        'tokens_used': response.usage.total_tokens if hasattr(response, 'usage') else 0,
+                        'finish_reason': response.choices[0].finish_reason
+                    }
+                )
+
+                # Emit a reward based on summary length (simple heuristic)
+                summary_length = len(summary_text)
+                if 500 <= summary_length <= 2000:
+                    reward = 0.8  # Good summary length
+                elif 200 <= summary_length < 500:
+                    reward = 0.5  # Too short
+                else:
+                    reward = 0.3  # Too long or too short
+
+                self.tracker.emit_reward(
+                    event_id=event_id,
+                    reward=reward,
+                    reason=f"Summary length: {summary_length} characters"
+                )
+
             logger.info(f"Successfully created summary for paper: {paper_id}")
 
             return {
@@ -151,6 +195,15 @@ Please clearly separate each section.
 
         except Exception as e:
             logger.error(f"Error creating summary for paper {paper_id}: {e}")
+
+            # Track error with Agent Lightning
+            if self.tracker and event_id:
+                self.tracker.emit_reward(
+                    event_id=event_id,
+                    reward=-1.0,
+                    reason=f"Error: {str(e)}"
+                )
+
             return {
                 'paper_id': paper_id,
                 'metadata': metadata,
