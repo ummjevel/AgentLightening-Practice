@@ -80,44 +80,66 @@ def main():
         presenter = PresenterAgent(config)
         print("✅ All agents initialized")
 
-        # Step 1: Fetch papers
-        print("\n📥 Fetching papers from arXiv...")
+        # Step 1: Fetch metadata only (no PDF download yet)
+        print("\n📥 Fetching paper metadata from arXiv...")
         category = config.get('arxiv', {}).get('category', 'eess.AS')
         max_results = config.get('arxiv', {}).get('max_results', 10)
         print(f"   Category: {category}")
         print(f"   Max results: {max_results}")
 
-        paper_data_list = fetcher.fetch_papers()
+        metadata_list = fetcher.fetch_metadata_only()
 
-        if not paper_data_list:
+        if not metadata_list:
             print("⚠️  No papers fetched. Exiting.")
             logger.warning("No papers were fetched")
             return
 
-        print(f"✅ Successfully fetched {len(paper_data_list)} papers")
+        print(f"✅ Successfully fetched metadata for {len(metadata_list)} papers")
 
         # Step 1.5: Filter papers by novelty (if enabled)
         novelty_config = config.get('novelty_filter', {})
         if novelty_config.get('enabled', False):
             print("\n🎯 Filtering papers by novelty and importance...")
             top_papers_count = novelty_config.get('top_papers_count', 10)
+            print(f"   Analyzing {len(metadata_list)} abstracts")
             print(f"   Selecting top {top_papers_count} papers")
 
             ranker = NoveltyRanker(config)
-            filtered_papers = ranker.rank_papers(paper_data_list)
+            filtered_metadata = ranker.rank_papers(metadata_list)
 
-            print(f"✅ Selected {len(filtered_papers)} papers based on novelty ranking")
-            papers_to_summarize = filtered_papers
+            print(f"✅ Selected {len(filtered_metadata)} papers based on novelty ranking")
+            papers_to_process = filtered_metadata
         else:
             print("\n⏭️  Novelty filtering disabled, processing all papers")
-            papers_to_summarize = paper_data_list
+            papers_to_process = metadata_list
 
-        # Step 2: Summarize papers
+        # Step 2: Download and process selected papers
+        print(f"\n📦 Downloading and processing {len(papers_to_process)} papers...")
+        paper_data_list = []
+        for i, paper_metadata in enumerate(papers_to_process):
+            try:
+                print(f"   [{i+1}/{len(papers_to_process)}] Processing {paper_metadata['metadata']['arxiv_id']}...")
+                paper_data = fetcher.process_paper(paper_metadata)
+                paper_data_list.append(paper_data)
+            except Exception as e:
+                logger.error(f"Failed to process paper: {e}")
+                continue
+
+        if not paper_data_list:
+            print("⚠️  No papers were successfully processed. Exiting.")
+            logger.warning("No papers were successfully processed")
+            return
+
+        print(f"✅ Successfully processed {len(paper_data_list)} papers")
+
+        papers_to_summarize = paper_data_list
+
+        # Step 3: Summarize papers
         print("\n📝 Creating summaries with LLM...")
         summaries = summarizer.summarize_papers(papers_to_summarize)
         print(f"✅ Created {len(summaries)} summaries")
 
-        # Step 3: Generate report
+        # Step 4: Generate report
         print("\n📊 Generating HTML report...")
         report_path = presenter.create_report(summaries)
         print(f"✅ Report generated: {report_path}")
