@@ -64,6 +64,11 @@ novelty_filter:
     - novelty  # How novel/innovative is the research
     - impact  # Potential impact and importance
     - clarity  # How clear and well-written is the abstract
+  # Ollama settings for novelty ranking (use local LLM)
+  use_ollama: true  # Use Ollama instead of cloud API
+  ollama_base_url: "http://localhost:11434"
+  ollama_model: "qwen3:8b"  # Text-only model for fast evaluation
+  temperature: 0.3  # Lower temperature for consistent scoring
 
 # Summary Mode Settings
 summary_mode:
