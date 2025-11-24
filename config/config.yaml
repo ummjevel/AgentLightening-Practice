@@ -3,7 +3,7 @@
 # arXiv API Settings
 arxiv:
   category: "eess.AS"  # Audio and Speech Processing
-  max_results: 2  # Set to 2 for quick testing (change to 10 for full run)
+  max_results: 50  # Number of papers to fetch (adjust as needed)
   sort_by: "submittedDate"
   sort_order: "descending"
 
