@@ -1,6 +1,7 @@
 """Summarizer Agent for creating paper summaries using LLM."""
 
 import logging
+import requests
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
 from utils.ollama_multimodal import OllamaMultimodal
@@ -27,23 +28,35 @@ class SummarizerAgent:
         mode_config = config.get('summary_mode', {})
         self.mode = mode_config.get('mode', 'abstract_only')  # abstract_only or multimodal
 
-        # Get LLM config
-        llm_config = config.get('llm', {})
-        self.api_key = llm_config.get('api_key')
-        self.base_url = llm_config.get('base_url')
-        self.model = llm_config.get('model', 'ax4')
-        self.temperature = llm_config.get('temperature', 0.7)
-        self.max_tokens = llm_config.get('max_tokens', 2000)
+        # Check if using Ollama for abstract_only mode
+        self.use_ollama = mode_config.get('use_ollama', False)
+
+        if self.use_ollama:
+            # Ollama settings for abstract summarization
+            self.ollama_base_url = mode_config.get('ollama_base_url', 'http://localhost:11434')
+            self.model = mode_config.get('ollama_model', 'qwen3:8b')
+            self.temperature = mode_config.get('temperature', 0.7)
+            self.max_tokens = mode_config.get('max_tokens', 2000)
+            logger.info(f"Initialized SummarizerAgent with Ollama (model: {self.model})")
+        else:
+            # Get LLM config for cloud API
+            llm_config = config.get('llm', {})
+            self.api_key = llm_config.get('api_key')
+            self.base_url = llm_config.get('base_url')
+            self.model = llm_config.get('model', 'ax4')
+            self.temperature = llm_config.get('temperature', 0.7)
+            self.max_tokens = llm_config.get('max_tokens', 2000)
+
+            # Initialize OpenAI client with custom base URL
+            self.client = OpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url
+            )
+            logger.info(f"Initialized SummarizerAgent with cloud LLM (model: {self.model})")
 
         # Get summary config
         summary_config = config.get('summary', {})
         self.language = summary_config.get('language', 'ko')
-
-        # Initialize OpenAI client with custom base URL
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
 
         # Initialize Ollama multimodal if mode is multimodal
         self.ollama = None
@@ -51,7 +64,7 @@ class SummarizerAgent:
             self.ollama = OllamaMultimodal(config)
             logger.info("Multimodal mode enabled with Ollama")
 
-        logger.info(f"Initialized SummarizerAgent with model: {self.model}, mode: {self.mode}")
+        logger.info(f"SummarizerAgent mode: {self.mode}, use_ollama: {self.use_ollama}")
         if self.tracker:
             logger.info("Agent Lightning tracking enabled for SummarizerAgent")
 
@@ -170,29 +183,53 @@ Please clearly separate each section.
                             'title': metadata['title'],
                             'model': self.model,
                             'temperature': self.temperature,
-                            'mode': 'abstract_only'
+                            'mode': 'abstract_only',
+                            'use_ollama': self.use_ollama
                         }
                     )
 
-                # Call LLM
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are an expert AI researcher who excels at summarizing academic papers in a clear and structured way."
+                # Call LLM (Ollama or cloud API)
+                if self.use_ollama:
+                    # Use Ollama API
+                    response = requests.post(
+                        f"{self.ollama_base_url}/api/generate",
+                        json={
+                            "model": self.model,
+                            "prompt": f"You are an expert AI researcher who excels at summarizing academic papers in a clear and structured way.\n\n{prompt}",
+                            "stream": False,
+                            "options": {
+                                "temperature": self.temperature,
+                                "num_predict": self.max_tokens
+                            }
                         },
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens
-                )
+                        timeout=120
+                    )
+                    response.raise_for_status()
+                    summary_text = response.json()['response']
+                    tokens_used = 0  # Ollama doesn't return token count
+                    finish_reason = "stop"
+                else:
+                    # Use cloud API
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an expert AI researcher who excels at summarizing academic papers in a clear and structured way."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        temperature=self.temperature,
+                        max_tokens=self.max_tokens
+                    )
 
-                # Extract summary
-                summary_text = response.choices[0].message.content
+                    # Extract summary
+                    summary_text = response.choices[0].message.content
+                    tokens_used = response.usage.total_tokens if hasattr(response, 'usage') else 0
+                    finish_reason = response.choices[0].finish_reason
 
                 # Track response with Agent Lightning
                 if self.tracker and event_id:
@@ -200,8 +237,8 @@ Please clearly separate each section.
                         event_id=event_id,
                         response=summary_text,
                         metadata={
-                            'tokens_used': response.usage.total_tokens if hasattr(response, 'usage') else 0,
-                            'finish_reason': response.choices[0].finish_reason
+                            'tokens_used': tokens_used,
+                            'finish_reason': finish_reason
                         }
                     )
 

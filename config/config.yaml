@@ -3,7 +3,7 @@
 # arXiv API Settings
 arxiv:
   category: "eess.AS"  # Audio and Speech Processing
-  max_results: 50  # Number of papers to fetch (adjust as needed)
+  max_results: 10  # Number of papers to fetch (adjust as needed)
   sort_by: "submittedDate"
   sort_order: "descending"
 
@@ -59,7 +59,7 @@ agent_lightning:
 # Novelty Filtering Settings (2-stage pipeline)
 novelty_filter:
   enabled: true  # Enable novelty-based filtering
-  top_papers_count: 10  # Number of top papers to select after filtering
+  top_papers_count: 3  # Number of top papers to select after filtering
   ranking_criteria:
     - novelty  # How novel/innovative is the research
     - impact  # Potential impact and importance
@@ -75,6 +75,13 @@ summary_mode:
   mode: "abstract_only"  # Options: "abstract_only" or "multimodal"
   # abstract_only: Use only abstract for summarization (fast, cheap)
   # multimodal: Use Ollama multimodal model with full PDF (slow, detailed)
+
+  # Ollama settings for abstract_only mode
+  use_ollama: true  # Use Ollama for summarization (same model as ranker)
+  ollama_base_url: "http://localhost:11434"
+  ollama_model: "qwen3:8b"  # Same model as NoveltyRanker
+  temperature: 0.7
+  max_tokens: 2000
 
 # Ollama Settings (for multimodal mode)
 ollama:
