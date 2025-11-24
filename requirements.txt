@@ -1,22 +1,33 @@
+# arXiv Paper Summarizer - Python Dependencies
+#
+# Install with: pip install -r requirements.txt
+#
+
 # Core dependencies
-arxiv>=2.1.0
-PyYAML>=6.0.1
-requests>=2.31.0
+arxiv==2.3.1
+PyYAML==6.0.1
+requests==2.32.5
 
 # PDF processing
-PyMuPDF>=1.23.0
-Pillow>=10.0.0
+PyMuPDF==1.26.6           # PDF text extraction and processing
+Pillow==12.0.0            # Image processing and manipulation
 
 # LLM and AI
-openai>=1.0.0
+openai==2.8.1             # OpenAI-compatible API client (for SKT-AI A.X-4.0)
 
 # Template rendering
-Jinja2>=3.1.2
+Jinja2==3.1.6             # HTML template engine
 
 # Utilities
-python-dateutil>=2.8.2
-tqdm>=4.66.0
+python-dateutil==2.9.0    # Date/time utilities
+tqdm==4.67.1              # Progress bars
 
 # Agent Lightning for optimization (optional)
-# Uncomment to enable Agent Lightning features
+# Uncomment the line below to enable Agent Lightning tracking features
+# Note: This is optional and the system works fine without it
 # agentlightning>=0.1.0
+
+# Additional dependencies installed automatically:
+# - feedparser (via arxiv)
+# - anyio, httpx, pydantic (via openai)
+# - MarkupSafe (via Jinja2)
