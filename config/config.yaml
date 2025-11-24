@@ -1,0 +1,58 @@
+# arXiv Paper Summarizer Configuration
+
+# arXiv API Settings
+arxiv:
+  category: "eess.AS"  # Audio and Speech Processing
+  max_results: 2  # Set to 2 for quick testing (change to 10 for full run)
+  sort_by: "submittedDate"
+  sort_order: "descending"
+
+# SKT-AI A.X-4.0 API Settings
+llm:
+  api_key: "sktax-XyeKFrq67ZjS4EpsDlrHHXV8it"
+  base_url: "https://guest-api.sktax.chat/v1"
+  model: "ax4"
+  temperature: 0.7
+  max_tokens: 2000
+
+# File Paths
+paths:
+  papers_dir: "data/papers"
+  images_dir: "data/images"
+  summaries_dir: "data/summaries"
+  templates_dir: "templates"
+
+# PDF Processing Settings
+pdf:
+  max_images_per_paper: 3
+  image_format: "png"
+  image_quality: 85
+  min_image_width: 300
+  min_image_height: 300
+
+# Summary Settings
+summary:
+  language: "ko"  # Korean
+  include_abstract: true
+  include_methodology: true
+  include_results: true
+  include_figures: true
+
+# Output Settings
+output:
+  format: "html"  # html or markdown
+  filename_template: "{date}-arxiv-summary.{format}"
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "arxiv_summarizer.log"
+
+# Agent Lightning Settings (for optimization)
+agent_lightning:
+  enabled: false  # Set to true to enable Agent Lightning tracking
+  store_path: "data/lightning_store"  # Path to store Agent Lightning data
+  track_prompts: true
+  track_responses: true
+  track_rewards: true
+  optimization_algorithm: "rl"  # rl, prompt_optimization, or supervised
