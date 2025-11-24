@@ -3,7 +3,7 @@
 # arXiv API Settings
 arxiv:
   category: "eess.AS"  # Audio and Speech Processing
-  max_results: 2  # Set to 2 for quick testing (change to 10 for full run)
+  max_results: 50  # Number of papers to fetch (adjust as needed)
   sort_by: "submittedDate"
   sort_order: "descending"
 
@@ -56,3 +56,29 @@ agent_lightning:
   track_responses: true
   track_rewards: true
   optimization_algorithm: "rl"  # rl, prompt_optimization, or supervised
+# Novelty Filtering Settings (2-stage pipeline)
+novelty_filter:
+  enabled: true  # Enable novelty-based filtering
+  top_papers_count: 10  # Number of top papers to select after filtering
+  ranking_criteria:
+    - novelty  # How novel/innovative is the research
+    - impact  # Potential impact and importance
+    - clarity  # How clear and well-written is the abstract
+
+# Summary Mode Settings
+summary_mode:
+  mode: "abstract_only"  # Options: "abstract_only" or "multimodal"
+  # abstract_only: Use only abstract for summarization (fast, cheap)
+  # multimodal: Use Ollama multimodal model with full PDF (slow, detailed)
+
+# Ollama Settings (for multimodal mode)
+ollama:
+  enabled: false  # Set to true when using multimodal mode
+  base_url: "http://localhost:11434"  # Ollama API endpoint
+  model: "qwen3-vl:8b-instruct"  # Multimodal model (llava, bakllava, qwen3-vl, etc.)
+  temperature: 0.7
+  num_ctx: 4096  # Context window size
+  pdf_to_image:
+    dpi: 150  # Resolution for PDF to image conversion
+    max_pages: 10  # Maximum pages to convert per paper
+    format: "png"

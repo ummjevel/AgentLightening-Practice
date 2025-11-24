@@ -3,6 +3,7 @@
 import logging
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
+from utils.ollama_multimodal import OllamaMultimodal
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,10 @@ class SummarizerAgent:
         self.config = config
         self.tracker = tracker
 
+        # Get summary mode
+        mode_config = config.get('summary_mode', {})
+        self.mode = mode_config.get('mode', 'abstract_only')  # abstract_only or multimodal
+
         # Get LLM config
         llm_config = config.get('llm', {})
         self.api_key = llm_config.get('api_key')
@@ -40,7 +45,13 @@ class SummarizerAgent:
             base_url=self.base_url
         )
 
-        logger.info(f"Initialized SummarizerAgent with model: {self.model}")
+        # Initialize Ollama multimodal if mode is multimodal
+        self.ollama = None
+        if self.mode == 'multimodal':
+            self.ollama = OllamaMultimodal(config)
+            logger.info("Multimodal mode enabled with Ollama")
+
+        logger.info(f"Initialized SummarizerAgent with model: {self.model}, mode: {self.mode}")
         if self.tracker:
             logger.info("Agent Lightning tracking enabled for SummarizerAgent")
 
@@ -118,71 +129,96 @@ Please clearly separate each section.
         metadata = paper_data['metadata']
         paper_id = metadata['arxiv_id']
 
-        logger.info(f"Creating summary for paper: {paper_id}")
+        logger.info(f"Creating summary for paper: {paper_id} (mode: {self.mode})")
 
         try:
-            # Create prompt
-            prompt = self.create_summary_prompt(paper_data)
-
-            # Track prompt with Agent Lightning
             event_id = ""
-            if self.tracker:
-                event_id = self.tracker.emit_prompt(
-                    agent_name="SummarizerAgent",
-                    prompt=prompt,
-                    metadata={
-                        'paper_id': paper_id,
-                        'title': metadata['title'],
-                        'model': self.model,
-                        'temperature': self.temperature
-                    }
+
+            # Choose summarization method based on mode
+            if self.mode == 'multimodal' and self.ollama and self.ollama.enabled:
+                # Use Ollama multimodal analysis
+                summary_text = self.ollama.analyze_paper_multimodal(paper_data)
+
+                # Track with Agent Lightning
+                if self.tracker:
+                    event_id = self.tracker.emit_prompt(
+                        agent_name="SummarizerAgent_Multimodal",
+                        prompt=f"Multimodal analysis of {metadata['title']}",
+                        metadata={
+                            'paper_id': paper_id,
+                            'mode': 'multimodal',
+                            'model': self.ollama.model
+                        }
+                    )
+                    self.tracker.emit_response(
+                        event_id=event_id,
+                        response=summary_text,
+                        metadata={'mode': 'multimodal'}
+                    )
+
+            else:
+                # Use abstract-only analysis (default)
+                prompt = self.create_summary_prompt(paper_data)
+
+                # Track prompt with Agent Lightning
+                if self.tracker:
+                    event_id = self.tracker.emit_prompt(
+                        agent_name="SummarizerAgent",
+                        prompt=prompt,
+                        metadata={
+                            'paper_id': paper_id,
+                            'title': metadata['title'],
+                            'model': self.model,
+                            'temperature': self.temperature,
+                            'mode': 'abstract_only'
+                        }
+                    )
+
+                # Call LLM
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert AI researcher who excels at summarizing academic papers in a clear and structured way."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens
                 )
 
-            # Call LLM
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert AI researcher who excels at summarizing academic papers in a clear and structured way."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=self.temperature,
-                max_tokens=self.max_tokens
-            )
+                # Extract summary
+                summary_text = response.choices[0].message.content
 
-            # Extract summary
-            summary_text = response.choices[0].message.content
+                # Track response with Agent Lightning
+                if self.tracker and event_id:
+                    self.tracker.emit_response(
+                        event_id=event_id,
+                        response=summary_text,
+                        metadata={
+                            'tokens_used': response.usage.total_tokens if hasattr(response, 'usage') else 0,
+                            'finish_reason': response.choices[0].finish_reason
+                        }
+                    )
 
-            # Track response with Agent Lightning
-            if self.tracker and event_id:
-                self.tracker.emit_response(
-                    event_id=event_id,
-                    response=summary_text,
-                    metadata={
-                        'tokens_used': response.usage.total_tokens if hasattr(response, 'usage') else 0,
-                        'finish_reason': response.choices[0].finish_reason
-                    }
-                )
+                    # Emit a reward based on summary length (simple heuristic)
+                    summary_length = len(summary_text)
+                    if 500 <= summary_length <= 2000:
+                        reward = 0.8  # Good summary length
+                    elif 200 <= summary_length < 500:
+                        reward = 0.5  # Too short
+                    else:
+                        reward = 0.3  # Too long or too short
 
-                # Emit a reward based on summary length (simple heuristic)
-                summary_length = len(summary_text)
-                if 500 <= summary_length <= 2000:
-                    reward = 0.8  # Good summary length
-                elif 200 <= summary_length < 500:
-                    reward = 0.5  # Too short
-                else:
-                    reward = 0.3  # Too long or too short
-
-                self.tracker.emit_reward(
-                    event_id=event_id,
-                    reward=reward,
-                    reason=f"Summary length: {summary_length} characters"
-                )
+                    self.tracker.emit_reward(
+                        event_id=event_id,
+                        reward=reward,
+                        reason=f"Summary length: {summary_length} characters"
+                    )
 
             logger.info(f"Successfully created summary for paper: {paper_id}")
 

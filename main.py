@@ -12,6 +12,7 @@ from pathlib import Path
 
 from utils.config_loader import ConfigLoader
 from utils.agent_lightning_tracker import AgentLightningTracker
+from utils.novelty_ranker import NoveltyRanker
 from agents.fetcher import FetcherAgent
 from agents.summarizer import SummarizerAgent
 from agents.presenter import PresenterAgent
@@ -95,9 +96,25 @@ def main():
 
         print(f"✅ Successfully fetched {len(paper_data_list)} papers")
 
+        # Step 1.5: Filter papers by novelty (if enabled)
+        novelty_config = config.get('novelty_filter', {})
+        if novelty_config.get('enabled', False):
+            print("\n🎯 Filtering papers by novelty and importance...")
+            top_papers_count = novelty_config.get('top_papers_count', 10)
+            print(f"   Selecting top {top_papers_count} papers")
+
+            ranker = NoveltyRanker(config)
+            filtered_papers = ranker.rank_papers(paper_data_list)
+
+            print(f"✅ Selected {len(filtered_papers)} papers based on novelty ranking")
+            papers_to_summarize = filtered_papers
+        else:
+            print("\n⏭️  Novelty filtering disabled, processing all papers")
+            papers_to_summarize = paper_data_list
+
         # Step 2: Summarize papers
         print("\n📝 Creating summaries with LLM...")
-        summaries = summarizer.summarize_papers(paper_data_list)
+        summaries = summarizer.summarize_papers(papers_to_summarize)
         print(f"✅ Created {len(summaries)} summaries")
 
         # Step 3: Generate report
