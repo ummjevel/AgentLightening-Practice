@@ -28,23 +28,11 @@ class NoveltyRanker:
         self.top_papers_count = filter_config.get('top_papers_count', 10)
         self.criteria = filter_config.get('ranking_criteria', ['novelty', 'impact', 'clarity'])
 
-        # Check if using Ollama
-        self.use_ollama = filter_config.get('use_ollama', False)
-
-        if self.use_ollama:
-            # Ollama settings
-            self.ollama_base_url = filter_config.get('ollama_base_url', 'http://localhost:11434')
-            self.model = filter_config.get('ollama_model', 'qwen2.5:latest')
-            self.temperature = filter_config.get('temperature', 0.3)
-            logger.info(f"Initialized NoveltyRanker with Ollama (model: {self.model})")
-        else:
-            # Cloud LLM settings (fallback)
-            llm_config = config.get('llm', {})
-            self.api_key = llm_config.get('api_key')
-            self.base_url = llm_config.get('base_url')
-            self.model = llm_config.get('model', 'ax4')
-            self.temperature = 0.3
-            logger.info(f"Initialized NoveltyRanker with cloud LLM (model: {self.model})")
+        # Ollama settings
+        self.ollama_base_url = filter_config.get('ollama_base_url', 'http://localhost:11434')
+        self.model = filter_config.get('ollama_model', 'qwen2.5:latest')
+        self.temperature = filter_config.get('temperature', 0.3)
+        logger.info(f"Initialized NoveltyRanker with Ollama (model: {self.model})")
 
         logger.info(f"NoveltyRanker enabled: {self.enabled}, top papers: {self.top_papers_count}")
 
@@ -143,44 +131,23 @@ class NoveltyRanker:
 }}"""
 
         try:
-            if self.use_ollama:
-                # Use Ollama API
-                response = requests.post(
-                    f"{self.ollama_base_url}/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": f"You are an expert researcher who evaluates academic papers. Always respond in valid JSON format.\n\n{prompt}",
-                        "stream": False,
-                        "format": "json",
-                        "options": {
-                            "temperature": self.temperature,
-                            "num_predict": 500
-                        }
-                    },
-                    timeout=60
-                )
-                response.raise_for_status()
-                result_text = response.json()['response']
-            else:
-                # Use cloud API (fallback - requires OpenAI client)
-                from openai import OpenAI
-                client = OpenAI(api_key=self.api_key, base_url=self.base_url)
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are an expert researcher who evaluates academic papers. Always respond in valid JSON format."
-                        },
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    temperature=self.temperature,
-                    max_tokens=500
-                )
-                result_text = response.choices[0].message.content.strip()
+            # Use Ollama API
+            response = requests.post(
+                f"{self.ollama_base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": f"You are an expert researcher who evaluates academic papers. Always respond in valid JSON format.\n\n{prompt}",
+                    "stream": False,
+                    "format": "json",
+                    "options": {
+                        "temperature": self.temperature,
+                        "num_predict": 500
+                    }
+                },
+                timeout=60
+            )
+            response.raise_for_status()
+            result_text = response.json()['response']
 
             # Parse JSON response
             # Try to extract JSON from markdown code blocks if present

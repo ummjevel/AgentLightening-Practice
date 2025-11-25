@@ -7,14 +7,6 @@ arxiv:
   sort_by: "submittedDate"
   sort_order: "descending"
 
-# SKT-AI A.X-4.0 API Settings
-llm:
-  api_key: "sktax-XyeKFrq67ZjS4EpsDlrHHXV8it"
-  base_url: "https://guest-api.sktax.chat/v1"
-  model: "ax4"
-  temperature: 0.7
-  max_tokens: 2000
-
 # File Paths
 paths:
   papers_dir: "data/papers"
