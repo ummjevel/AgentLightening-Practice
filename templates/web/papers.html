@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}논문 리스트 - Paper Review Service{% endblock %}
+
+{% block extra_head %}
+<style>
+    .paper-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+    }
+
+    .paper-card.arxiv {
+        border-left-color: #e74c3c;
+    }
+
+    .paper-card.huggingface {
+        border-left-color: #f39c12;
+    }
+
+    .paper-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+    }
+
+    .paper-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+
+    .paper-meta {
+        font-size: 14px;
+        color: #777;
+        margin-bottom: 5px;
+    }
+
+    .source-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .source-badge.arxiv {
+        background: #e74c3c;
+        color: white;
+    }
+
+    .source-badge.huggingface {
+        background: #f39c12;
+        color: white;
+    }
+
+    .paper-summary {
+        line-height: 1.8;
+        color: #555;
+        margin-top: 15px;
+        white-space: pre-wrap;
+    }
+
+    .paper-tags {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .tag {
+        display: inline-block;
+        background: #ecf0f1;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #555;
+    }
+
+    .stats {
+        background: #ecf0f1;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .stats p {
+        margin: 5px 0;
+        font-size: 14px;
+    }
+
+    .back-link {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #3498db;
+        text-decoration: none;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-link">← 홈으로 돌아가기</a>
+
+<div class="stats">
+    <h2>📊 검색 결과 통계</h2>
+    <p>총 <strong>{{ report.total_papers }}</strong>개 논문</p>
+    <p>🔴 arXiv: {{ report.arxiv_count }}개</p>
+    <p>🟠 HuggingFace: {{ report.huggingface_count }}개</p>
+    <p>📅 날짜: {{ report.date }}</p>
+</div>
+
+{% if report.summaries %}
+    {% for summary in report.summaries %}
+    <div class="paper-card {{ summary.metadata.source }}">
+        <div class="paper-header">
+            <div>
+                <h3 class="paper-title">{{ summary.metadata.title }}</h3>
+                <div class="paper-meta">
+                    <span class="source-badge {{ summary.metadata.source }}">
+                        {{ summary.metadata.source.upper() }}
+                    </span>
+                    {% if summary.metadata.arxiv_id %}
+                        | arXiv ID: {{ summary.metadata.arxiv_id }}
+                    {% endif %}
+                </div>
+                <div class="paper-meta">
+                    저자: {{ summary.metadata.authors[:3]|join(', ') }}
+                    {% if summary.metadata.authors|length > 3 %} 외 {{ summary.metadata.authors|length - 3 }}명{% endif %}
+                </div>
+                <div class="paper-meta">
+                    발행일: {{ summary.metadata.published.strftime('%Y-%m-%d') }}
+                </div>
+                {% if summary.metadata.upvotes > 0 %}
+                <div class="paper-meta">
+                    👍 Upvotes: {{ summary.metadata.upvotes }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="paper-summary">{{ summary.summary }}</div>
+
+        {% if summary.metadata.tags %}
+        <div class="paper-tags">
+            {% for tag in summary.metadata.tags[:5] %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="alert alert-info">
+        검색 결과가 없습니다. 필터 조건을 조정해보세요.
+    </div>
+{% endif %}
+{% endblock %}

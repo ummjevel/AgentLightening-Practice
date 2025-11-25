@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: paper-review-web
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - ollama
+    networks:
+      - paper-review-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: paper-review-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - paper-review-network
+    # Pull models on startup
+    command: serve
+
+networks:
+  paper-review-network:
+    driver: bridge
+
+volumes:
+  ollama_data:

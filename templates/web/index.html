@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}홈 - Paper Review Service{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🔍 논문 검색 필터</h2>
+
+    <form action="/papers" method="get">
+        <div class="form-group">
+            <label>📌 소스 선택</label>
+            <div class="radio-group">
+                <label><input type="checkbox" name="sources" value="arxiv" checked> arXiv</label>
+                <label><input type="checkbox" name="sources" value="huggingface" checked> HuggingFace</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>📅 날짜 범위</label>
+            <input type="number" name="days_back" value="1" min="1" max="30">
+            <small>최근 N일 이내 논문</small>
+        </div>
+
+        <div class="form-group">
+            <label>🏷️ arXiv 카테고리</label>
+            <input type="text" name="arxiv_categories" placeholder="cs.CV, cs.AI, eess.AS">
+            <small>쉼표로 구분 (예: cs.CV, cs.AI, eess.AS)</small>
+        </div>
+
+        <div class="form-group">
+            <label>arXiv 필터 모드</label>
+            <div class="radio-group">
+                <label><input type="radio" name="arxiv_filter_mode" value="OR" checked> OR (하나라도 포함)</label>
+                <label><input type="radio" name="arxiv_filter_mode" value="AND"> AND (모두 포함)</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>🔖 HuggingFace 키워드</label>
+            <input type="text" name="hf_keywords" placeholder="computer-vision, audio">
+            <small>쉼표로 구분 (예: computer-vision, diffusion)</small>
+        </div>
+
+        <div class="form-group">
+            <label>HuggingFace 필터 모드</label>
+            <div class="radio-group">
+                <label><input type="radio" name="hf_filter_mode" value="OR" checked> OR (하나라도 포함)</label>
+                <label><input type="radio" name="hf_filter_mode" value="AND"> AND (모두 포함)</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn">🚀 논문 검색</button>
+    </form>
+</div>
+
+{% if latest_report %}
+<div class="card">
+    <h2>📊 최근 검색 결과</h2>
+    <p>총 <strong>{{ latest_report.total_papers }}</strong>개 논문</p>
+    <ul>
+        <li>arXiv: {{ latest_report.arxiv_count }}개</li>
+        <li>HuggingFace: {{ latest_report.huggingface_count }}개</li>
+    </ul>
+    <a href="/papers" class="btn">결과 보기</a>
+</div>
+{% endif %}
+
+{% if is_running %}
+<div class="alert alert-info">
+    ⏳ 논문 수집 및 요약 작업이 진행 중입니다...
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Convert checkboxes to comma-separated value
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const checkboxes = document.querySelectorAll('input[name="sources"]:checked');
+        const values = Array.from(checkboxes).map(cb => cb.value).join(',');
+
+        // Remove individual checkboxes
+        checkboxes.forEach(cb => cb.remove());
+
+        // Add hidden input with comma-separated values
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'sources';
+        input.value = values;
+        form.appendChild(input);
+    });
+</script>
+{% endblock %}
