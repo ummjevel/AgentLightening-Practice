@@ -2,8 +2,8 @@
 
 # arXiv API Settings
 arxiv:
-  category: "eess.AS"  # Audio and Speech Processing
-  max_results: 10  # Number of papers to fetch (adjust as needed)
+  category: "cs.LG" # "cs.AI" # "eess.AS"  # Audio and Speech Processing
+  max_results: 1000  # Number of papers to fetch (adjust as needed)
   sort_by: "submittedDate"
   sort_order: "descending"
 
@@ -59,7 +59,7 @@ agent_lightning:
 # Novelty Filtering Settings (2-stage pipeline)
 novelty_filter:
   enabled: true  # Enable novelty-based filtering
-  top_papers_count: 3  # Number of top papers to select after filtering
+  top_papers_count: 10  # Number of top papers to select after filtering
   ranking_criteria:
     - novelty  # How novel/innovative is the research
     - impact  # Potential impact and importance
